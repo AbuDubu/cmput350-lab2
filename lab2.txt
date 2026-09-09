@@ -1,2 +1,14 @@
 Answer written questions 1 and 2 here.
+question 1:
+in sfml the origin is the top left corner, while in math as we learned through out
+school the origin is either bottom left or central (depending on the number of quadrants). so in regular math, 0 degrees is pointing right and 90 degrees points up,
+
+in sfml 0 points right but 90 points down, and all angles move clockwise starting from the x axis.
+
+surprisingly this did not require any change in the formulas i used, it seems SFML is internally consistent with all the angle calculations?
+
+question 2:
+this setup seems easier to keep consistent and not accidentally mess something up
+while editing the input handling function, (seperation of concerns), this would also be much easier to write tests for since you can mock the user input and dont require manual testing for everything. that would also mean you could make a AI player that can play the game
+without needing a keyboard.
 
