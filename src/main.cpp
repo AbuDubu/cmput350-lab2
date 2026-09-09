@@ -10,6 +10,7 @@
 #include <SFML/System/Angle.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/Window.hpp>
+#include <SFML/Window/Keyboard.hpp>
 
 // Define M_PI if not already defined
 #ifndef M_PI
@@ -138,13 +139,23 @@ struct Bullet : public sf::Drawable {
 
     void update() {
         // =====
-        // TODO: Implement bullet update mechanics. In detail:
+        // : Implement bullet update mechanics. In detail:
         //  - Move bullet's shape using bullet's velocity
         //  - Decrease bullet lifetime by 1.0f / 60.0f (60 FPS)
         //  - Mark bullets as dead (bullet.isAlive = false) if:
         //      - lifetime <= 0.0f, or
         //      - bullet is off screen (use shape.getPosition() and
+        //
         //        WINDOW_WIDTH and WINDOW_HEIGHT)
+        auto currentPos{shape.getPosition()};
+        auto radius{shape.getRadius()};
+        if (lifetime <= 0.0f or currentPos.x > WINDOW_WIDTH + radius or currentPos.x < -radius or
+            currentPos.y > WINDOW_HEIGHT + radius or currentPos.y < -radius) {
+            isAlive = false;
+        } else {
+            shape.setPosition({currentPos.x + velocity.x, currentPos.y + velocity.y});
+            lifetime -= 1.0f / 60.0f;
+        }
     }
 
     void draw(sf::RenderTarget& target, sf::RenderStates states) const override {
@@ -242,10 +253,21 @@ public:
         mSpaceship.setRotation(sf::radians(angleRadians + M_PI / 2));
         // --- Shooting ---
         // =====
-        // TODO: Implement shooting mechanics, keeping in mind the shooting cooldown. In detail:
+        // : Implement shooting mechanics, keeping in mind the shooting cooldown. In detail:
         //  - Consider whether the user wants to shoot, and also the cooldown.
         //  - Bullet direction is the same as the spaceship's facing direction.
         //  - Bullet should be shot from the current spaceship position.
+
+        if (inputSummary.shootingDesired) {
+            if (mShootClock.getElapsedTime().asSeconds() > SHOOT_COOLDOWN and
+                facingVector.length() > 0.0f) {
+                mBullets.push_back(Bullet{
+                    mSpaceship.getPosition(),
+                    facingVector.normalized() * BULLET_SPEED,
+                });
+                mShootClock.restart();
+            }
+        }
 
         // --- Update Asteroids ---
         for (auto& asteroid : mAsteroids) {
@@ -294,8 +316,9 @@ private:
                                      asteroid.shape.getPosition(), asteroid.shape.getRadius())) {
                     bullet.isAlive = false;
                     asteroid.isAlive = false;
-                    // TODO: Add Explosion Sound Effect
+                    // : Add Explosion Sound Effect
                     // Play explosion sound!
+                    mExplosionSound.play();
 
                     break;  // Bullet can only hit one asteroid
                 }
@@ -307,9 +330,16 @@ private:
         for (auto& asteroid : mAsteroids) {
             if (!asteroid.isAlive) continue;
             // =====
-            // TODO: Use Circle-Circle intersection test (circlesIntersect)
+            // : Use Circle-Circle intersection test (circlesIntersect)
             // to determine if the spaceship's hitbox collides with an asteroid.
             // If so, kill the asteroid and play an explosion sound.
+            if (circlesIntersect(mSpaceship.getPosition(), mSpaceship.hitboxRadius(),
+                                 asteroid.shape.getPosition(), asteroid.shape.getRadius())) {
+                asteroid.isAlive = false;
+
+                // : play sound
+                mExplosionSound.play();
+            }
         }
     }
 
@@ -333,8 +363,17 @@ private:
 
     void cleanupDeadBullets() {
         // =====
-        // TODO: What should we do with dead bullet objects? Just keep them lying around taking up
-        // space in memory?
+        //: What should we do with dead bullet objects? Just keep them lying around taking
+        // up space in memory?
+        std::vector<Bullet> aux;
+        aux.reserve(mBullets.size());
+        for (const auto& bullet : mBullets) {
+            if (bullet.isAlive) {
+                aux.push_back(bullet);
+            }
+        }
+
+        aux.swap(mBullets);
     }
 
     void draw(sf::RenderTarget& target, sf::RenderStates states) const override {
